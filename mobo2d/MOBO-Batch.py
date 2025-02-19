@@ -22,23 +22,23 @@ from botorch.utils.multi_objective.box_decompositions.dominated import Dominated
 
 import warnings
 from botorch.exceptions.warnings import NumericsWarning, BadInitialCandidatesWarning, InputDataWarning, OptimizationWarning
-warnings.filterwarnings("ignore", category = NumericsWarning)
-warnings.filterwarnings("ignore", category = BadInitialCandidatesWarning)
-warnings.filterwarnings("ignore", category = InputDataWarning)
-warnings.filterwarnings("ignore", category = OptimizationWarning)
-warnings.filterwarnings("ignore", category = RuntimeWarning)
+# warnings.filterwarnings("ignore", category = NumericsWarning)
+# warnings.filterwarnings("ignore", category = BadInitialCandidatesWarning)
+# warnings.filterwarnings("ignore", category = InputDataWarning)
+# warnings.filterwarnings("ignore", category = OptimizationWarning)
+# warnings.filterwarnings("ignore", category = RuntimeWarning)
 
 from sumOfGaussians import sumOfGaussians
 
 # Load the individual objective functions
-with open('data/func1.pkl', 'rb') as file:
+with open('data64/func1.pkl', 'rb') as file:
     func1 = pickle.load(file)
-with open('data/func2.pkl', 'rb') as file:
+with open('data64/func2.pkl', 'rb') as file:
     func2 = pickle.load(file)
 
 # Use GPU if possible
 tkwargs = {
-    "dtype": torch.float,
+    "dtype": torch.double,
     "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
 }
 
@@ -102,7 +102,8 @@ def step_mobo(acq_name, model, train_X, batch_size):
             q = batch_size,
             num_restarts = NUM_RESTARTS,
             raw_samples = RAW_SAMPLES, 
-            sequential = False
+            sequential = False,
+            options = {"batch_limit": 5, "maxiter": 200},
         )
 
     new_X = candidates.detach()
@@ -164,7 +165,7 @@ def save_results(acq_name, batch_size, n_iter, hvs, times):
         writer.writerow([acq_name, batch_size, n_iter, json.dumps(hvs), json.dumps(times)])
 
 def main():
-    init_X = torch.load('data/train.pt').to(**tkwargs)
+    init_X = torch.load('data64/train.pt').to(**tkwargs)
     func = multi_objective
 
     with open(CSV_FILE, mode="w", newline="") as file:
