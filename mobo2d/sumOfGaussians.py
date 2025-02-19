@@ -1,5 +1,11 @@
 import torch
 
+# Use GPU if possible
+tkwargs = {
+    "dtype": torch.double,
+    "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+}
+
 class sumOfGaussians:
     def __init__(self, d, n_maxima, global_mag, local_mag, alpha, beta, gamma):
         self.d = d
@@ -9,8 +15,8 @@ class sumOfGaussians:
         self.beta = beta
         self.gamma = gamma
 
-        self.global_loc = torch.DoubleTensor(d).uniform_(-1,1)
-        self.local_loc = [torch.DoubleTensor(d).uniform_(-1,1) for _ in range(n_maxima)]
+        self.global_loc = torch.DoubleTensor(d).uniform_(-1,1).to(**tkwargs)
+        self.local_loc = [torch.DoubleTensor(d).uniform_(-1,1).to(**tkwargs) for _ in range(n_maxima)]
 
     def eval(self, X):
         # First ensure all dimensions are correct
