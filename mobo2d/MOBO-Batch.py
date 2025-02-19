@@ -32,17 +32,25 @@ with open('data/func1.pkl', 'rb') as file:
 with open('data/func2.pkl', 'rb') as file:
     func2 = pickle.load(file)
 
+# Use GPU if possible
+tkwargs = {
+    "dtype": torch.double,
+    "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+}
+
 # Parameters
-BOUNDS = torch.tensor([[-1, -1], [1, 1]], dtype = torch.float64)
-REFERENCE = torch.tensor([-1,-1])
+BOUNDS = torch.tensor([[-1, -1], [1, 1]], **tkwargs)
+REFERENCE = torch.tensor([-1,-1], **tkwargs)
 NUM_RESTARTS = 20
 RAW_SAMPLES = 512
 
-ACQUISITION_FUNCTIONS = ["Random", "qEHVI", "qLogEHVI", "qNEHVI", "qLogNEHVI", "qLogNParEGO"]
+ACQUISITION_FUNCTIONS = ["Random", "qLogEHVI", "qLogNEHVI", "qLogNParEGO"]
 EXPERIMENTS = [(1, 100), (5, 20), (10, 10)]  # (batch_size, n_iter)
 
 # Output CSV file
 CSV_FILE = "results.csv"
+
+# Use GPU if available
 
 def multi_objective(X):
     # Accepts X as a batch_size x dim tensor
@@ -64,16 +72,10 @@ def initialize_model(train_X, train_Y):
     return mll, model
 
 def get_acq(acq_name, model, train_X):
-    if acq_name == "qEHVI":
-        pred = model.posterior(train_X).mean
-        partitioning = FastNondominatedPartitioning(REFERENCE, pred)
-        acq = qExpectedHypervolumeImprovement(model, REFERENCE, partitioning)
-    elif acq_name == "qLogEHVI":
+    if acq_name == "qLogEHVI":
         pred = model.posterior(train_X).mean
         partitioning = FastNondominatedPartitioning(REFERENCE, pred)
         acq = qLogExpectedHypervolumeImprovement(model, REFERENCE, partitioning)
-    elif acq_name == "qNEHVI":
-        acq = qNoisyExpectedHypervolumeImprovement(model, REFERENCE, train_X, prune_baseline = True)
     elif acq_name == "qLogNEHVI":
         acq = qLogNoisyExpectedHypervolumeImprovement(model, REFERENCE, train_X, prune_baseline = True)
     elif acq_name == "qLogNParEGO":
@@ -154,7 +156,7 @@ def save_results(acq_name, batch_size, n_iter, hvs, times):
         writer.writerow([acq_name, batch_size, n_iter, json.dumps(hvs), json.dumps(times)])
 
 def main():
-    init_X = torch.load('data/train.pt')
+    init_X = torch.load('data/train.pt').to(**tkwargs)
     func = multi_objective
 
     with open(CSV_FILE, mode="w", newline="") as file:
