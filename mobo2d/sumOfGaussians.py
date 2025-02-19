@@ -2,7 +2,7 @@ import torch
 
 # Use GPU if possible
 tkwargs = {
-    "dtype": torch.double,
+    "dtype": torch.float,
     "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
 }
 

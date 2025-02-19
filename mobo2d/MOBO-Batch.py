@@ -21,8 +21,12 @@ from botorch.utils.multi_objective.box_decompositions.non_dominated import FastN
 from botorch.utils.multi_objective.box_decompositions.dominated import DominatedPartitioning
 
 import warnings
-from botorch.exceptions.warnings import NumericsWarning
+from botorch.exceptions.warnings import NumericsWarning, BadInitialCandidatesWarning, InputDataWarning, OptimizationWarning
 warnings.filterwarnings("ignore", category = NumericsWarning)
+warnings.filterwarnings("ignore", category = BadInitialCandidatesWarning)
+warnings.filterwarnings("ignore", category = InputDataWarning)
+warnings.filterwarnings("ignore", category = OptimizationWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning)
 
 from sumOfGaussians import sumOfGaussians
 
@@ -34,7 +38,7 @@ with open('data/func2.pkl', 'rb') as file:
 
 # Use GPU if possible
 tkwargs = {
-    "dtype": torch.double,
+    "dtype": torch.float,
     "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
 }
 
@@ -131,6 +135,10 @@ def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter):
 
         # Select new candidates
         new_X, new_Y = step_mobo(acq_name, model, train_X, batch_size)
+
+        # Clear CUDA cache after acquisition optimization
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         # Append to training tensors
         train_X = torch.cat([train_X, new_X])
