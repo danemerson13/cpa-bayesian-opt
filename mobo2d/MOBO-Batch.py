@@ -22,11 +22,11 @@ from botorch.utils.multi_objective.box_decompositions.dominated import Dominated
 
 import warnings
 from botorch.exceptions.warnings import NumericsWarning, BadInitialCandidatesWarning, InputDataWarning, OptimizationWarning
-# warnings.filterwarnings("ignore", category = NumericsWarning)
-# warnings.filterwarnings("ignore", category = BadInitialCandidatesWarning)
-# warnings.filterwarnings("ignore", category = InputDataWarning)
-# warnings.filterwarnings("ignore", category = OptimizationWarning)
-# warnings.filterwarnings("ignore", category = RuntimeWarning)
+warnings.filterwarnings("ignore", category = NumericsWarning)
+warnings.filterwarnings("ignore", category = BadInitialCandidatesWarning)
+warnings.filterwarnings("ignore", category = InputDataWarning)
+warnings.filterwarnings("ignore", category = OptimizationWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning)
 
 from sumOfGaussians import sumOfGaussians
 
