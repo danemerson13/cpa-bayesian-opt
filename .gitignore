@@ -15,3 +15,10 @@ scratch.*
 
 # Results files
 results*
+
+# Memplots
+memplot*
+mprofile*
+
+# Gifs
+*.gif

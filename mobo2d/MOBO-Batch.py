@@ -102,7 +102,7 @@ def step_mobo(acq_name, model, train_X, batch_size):
             q = batch_size,
             num_restarts = NUM_RESTARTS,
             raw_samples = RAW_SAMPLES, 
-            sequential = False,
+            sequential = True,
             options = {"batch_limit": 5, "maxiter": 200},
         )
 
