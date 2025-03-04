@@ -10,7 +10,8 @@ __pycache__/
 # VS Code generated files
 .vscode/
 
-# Scratch files
+# Scratch files and folders
+scratch*
 scratch.*
 
 # Results files
