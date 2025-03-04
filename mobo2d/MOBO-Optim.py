@@ -14,6 +14,7 @@ from botorch import fit_gpytorch_mll
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
 
 from botorch.optim.optimize import optimize_acqf
+from botorch.generation.gen import gen_candidates_torch
 from botorch.acquisition.multi_objective.monte_carlo import qExpectedHypervolumeImprovement, qNoisyExpectedHypervolumeImprovement
 from botorch.acquisition.multi_objective.logei import qLogExpectedHypervolumeImprovement, qLogNoisyExpectedHypervolumeImprovement
 from botorch.acquisition.multi_objective.parego import qLogNParEGO
@@ -45,16 +46,12 @@ tkwargs = {
 # Parameters
 BOUNDS = torch.tensor([[-1, -1], [1, 1]], **tkwargs)
 REFERENCE = torch.tensor([-1,-1], **tkwargs)
-NUM_RESTARTS = 20
+NUM_RESTARTS = 10
 RAW_SAMPLES = 512
 
-ACQUISITION_FUNCTIONS = ["Random", "qLogEHVI", "qLogNEHVI", "qLogNParEGO"]
-EXPERIMENTS = [(1, 100), (5, 20), (10, 10)]  # (batch_size, n_iter)
-
-# Output CSV file
-CSV_FILE = "results.csv"
-
-# Use GPU if available
+ACQUISITION_FUNCTION = ["qLogEHVI"]
+EXPERIMENT = [(10, 20)]  # (batch_size, n_iter)
+RUNS = [0,1,2,3,4]
 
 def multi_objective(X):
     # Accepts X as a batch_size x dim tensor
@@ -91,19 +88,20 @@ def get_acq(acq_name, model, train_X):
     
     return acq
 
-def step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL):
+def step_mobo(acq_name, model, train_X, batch_size):
     if acq_name == "Random":
         candidates = draw_sobol_samples(BOUNDS, batch_size, 1).squeeze(1)
     else:
         acq = get_acq(acq_name, model, train_X)
         candidates, _ = optimize_acqf(
             acq_function = acq,
+            gen_candidates = gen_candidates_torch(),
             bounds = BOUNDS,
             q = batch_size,
             num_restarts = NUM_RESTARTS,
-            raw_samples = RAW_SAMPLES, 
-            sequential = SEQUENTIAL,
-            options = {"batch_limit": 5, "maxiter": 200},
+            raw_samples = RAW_SAMPLES,
+            sequential = True,
+            options = {"batch_limit": 5, "maxiter": 200}
         )
 
     new_X = candidates.detach()
@@ -111,7 +109,7 @@ def step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL):
 
     return new_X, new_Y
 
-def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
+def run_bayesian_opt(run, acq_name, func, init_X, batch_size, n_iter):
     # Generate the initial objective function data
     init_Y = func(init_X)
 
@@ -135,7 +133,7 @@ def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
         fit_gpytorch_mll(mll)
 
         # Select new candidates
-        new_X, new_Y = step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL)
+        new_X, new_Y = step_mobo(acq_name, model, train_X, batch_size)
 
         # Clear CUDA cache after acquisition optimization
         if torch.cuda.is_available():
@@ -155,29 +153,20 @@ def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
         # Reinitialize models
         mll, model = initialize_model(train_X, train_Y)
 
-        print(f'[{acq_name}, batch={batch_size}, iter={i}/{n_iter}, seq = {SEQUENTIAL}], HV = {hvs[-1]:.5f}, Time = {iteration_time:.2f} sec')
+        print(f'[Run #{run}, {acq_name}, batch={batch_size}, iter={i}/{n_iter}], HV = {hvs[-1]:.5f}, Time = {iteration_time:.2f} sec')
 
     return hvs, times
-    
-def save_results(acq_name, batch_size, n_iter, seq, hvs, times):
-    with open(CSV_FILE, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([acq_name, batch_size, n_iter, seq, json.dumps(hvs), json.dumps(times)])
+
 
 def main():
     init_X = torch.load('data64/train.pt').to(**tkwargs)
     func = multi_objective
 
-    with open(CSV_FILE, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Acquisition", "Batch Size", "Iterations", "Sequential", "Hypervolumes", "Times"])
-
-    for sequential in [True, False]:
-        for acq_name in ACQUISITION_FUNCTIONS:
-            for batch_size, n_iter in EXPERIMENTS:
+    for run in RUNS:
+        for acq_name in ACQUISITION_FUNCTION:
+            for batch_size, n_iter in EXPERIMENT:
                 try:
-                    hvs, times = run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, sequential)
-                    save_results(acq_name, batch_size, n_iter, sequential, hvs, times)
+                    hvs, times = run_bayesian_opt(run, acq_name, func, init_X, batch_size, n_iter)
                 except Exception as e:
                     print(f"Failed with {e}")
 

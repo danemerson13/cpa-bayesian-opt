@@ -45,16 +45,15 @@ tkwargs = {
 # Parameters
 BOUNDS = torch.tensor([[-1, -1], [1, 1]], **tkwargs)
 REFERENCE = torch.tensor([-1,-1], **tkwargs)
-NUM_RESTARTS = 20
-RAW_SAMPLES = 512
+NUM_RESTARTS = 10
+RAW_SAMPLES = 1024
 
 ACQUISITION_FUNCTIONS = ["Random", "qLogEHVI", "qLogNEHVI", "qLogNParEGO"]
-EXPERIMENTS = [(1, 100), (5, 20), (10, 10)]  # (batch_size, n_iter)
+EXPERIMENTS = [(10, 20)]  # (batch_size, n_iter)
+RUNS = [0,1,2,3,4]
 
 # Output CSV file
-CSV_FILE = "results.csv"
-
-# Use GPU if available
+CSV_FILE = "results-replicate.csv"
 
 def multi_objective(X):
     # Accepts X as a batch_size x dim tensor
@@ -91,7 +90,7 @@ def get_acq(acq_name, model, train_X):
     
     return acq
 
-def step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL):
+def step_mobo(acq_name, model, train_X, batch_size):
     if acq_name == "Random":
         candidates = draw_sobol_samples(BOUNDS, batch_size, 1).squeeze(1)
     else:
@@ -102,8 +101,8 @@ def step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL):
             q = batch_size,
             num_restarts = NUM_RESTARTS,
             raw_samples = RAW_SAMPLES, 
-            sequential = SEQUENTIAL,
-            options = {"batch_limit": 5, "maxiter": 200},
+            sequential = True,
+            options = {"batch_limit": 20, "maxiter": 100},
         )
 
     new_X = candidates.detach()
@@ -111,7 +110,7 @@ def step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL):
 
     return new_X, new_Y
 
-def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
+def run_bayesian_opt(run, acq_name, func, init_X, batch_size, n_iter):
     # Generate the initial objective function data
     init_Y = func(init_X)
 
@@ -135,7 +134,7 @@ def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
         fit_gpytorch_mll(mll)
 
         # Select new candidates
-        new_X, new_Y = step_mobo(acq_name, model, train_X, batch_size, SEQUENTIAL)
+        new_X, new_Y = step_mobo(acq_name, model, train_X, batch_size)
 
         # Clear CUDA cache after acquisition optimization
         if torch.cuda.is_available():
@@ -155,14 +154,14 @@ def run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, SEQUENTIAL):
         # Reinitialize models
         mll, model = initialize_model(train_X, train_Y)
 
-        print(f'[{acq_name}, batch={batch_size}, iter={i}/{n_iter}, seq = {SEQUENTIAL}], HV = {hvs[-1]:.5f}, Time = {iteration_time:.2f} sec')
+        print(f'[Run #{run}, {acq_name}, batch={batch_size}, iter={i}/{n_iter}], HV = {hvs[-1]:.5f}, Time = {iteration_time:.2f} sec')
 
     return hvs, times
     
-def save_results(acq_name, batch_size, n_iter, seq, hvs, times):
+def save_results(run, acq_name, batch_size, n_iter, hvs, times):
     with open(CSV_FILE, mode="a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([acq_name, batch_size, n_iter, seq, json.dumps(hvs), json.dumps(times)])
+        writer.writerow([run, acq_name, batch_size, n_iter, json.dumps(hvs), json.dumps(times)])
 
 def main():
     init_X = torch.load('data64/train.pt').to(**tkwargs)
@@ -170,16 +169,17 @@ def main():
 
     with open(CSV_FILE, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Acquisition", "Batch Size", "Iterations", "Sequential", "Hypervolumes", "Times"])
+        writer.writerow(["Run", "Acquisition", "Batch Size", "Iterations", "Hypervolumes", "Times"])
 
-    for sequential in [True, False]:
+    for run in RUNS:
         for acq_name in ACQUISITION_FUNCTIONS:
             for batch_size, n_iter in EXPERIMENTS:
                 try:
-                    hvs, times = run_bayesian_opt(acq_name, func, init_X, batch_size, n_iter, sequential)
-                    save_results(acq_name, batch_size, n_iter, sequential, hvs, times)
+                    hvs, times = run_bayesian_opt(run, acq_name, func, init_X, batch_size, n_iter)
+                    save_results(run, acq_name, batch_size, n_iter, hvs, times)
                 except Exception as e:
                     print(f"Failed with {e}")
+                    save_results(run, acq_name, batch_size, n_iter, hvs, times)
 
 if __name__ == "__main__":
     main()

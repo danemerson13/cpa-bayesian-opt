@@ -15,6 +15,7 @@ scratch.*
 
 # Results files
 results*
+plots*
 
 # Memplots
 memplot*
