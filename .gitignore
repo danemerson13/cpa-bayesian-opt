@@ -17,13 +17,13 @@ scratch.*
 # Archive folders
 archive*
 
-# Results files
-results*
-plots*
-
 # Memplots
 memplot*
 mprofile*
+
+# Images
+*.png
+*.jpg
 
 # Gifs
 *.gif
