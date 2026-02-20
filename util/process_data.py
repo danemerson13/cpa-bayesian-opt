@@ -51,7 +51,7 @@ def parse_results(df, iteration):
 
 def main():
     # Set the correct iteration and then the results will be saved into the correct subfolders as .pt files
-    iteration = 2
+    iteration = 8
     path = 'results'
     filename = f'results_iter{iteration}.xlsx'
 
