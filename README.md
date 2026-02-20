@@ -6,3 +6,6 @@ We optimize under two typically competing objectives, minimized toxicity and max
 
 # Code
 The bulk of our code is contained within `src/mobo.py`. We run iterations of our optimization loop with four different methods. First, we have a naive method, where the samples are chosen at random. Next, we use the ParEGO method which is a common SOTA method in multi-objective optimization. Finally, we have two SOTA multi-objective Bayesian optimization methods, LogNEHVI and VarLogNEHVI. We select batches of 10 samples for each method, resulting in 40 samples for each iteration. Based on the initial dataset and the previous iterations, the code selects the next batch to screen. The initial data is contained within the `data/reduced_data_k100.pt`. Each iteration we generate a batch to screen under the `candidates` folder. The results of each screen including the experimental mean viability and variance is in the `results` folder. We parse the results into the `data` folder under their respective acquisition functions using the `util/process_data.py` script.
+
+# Results
+We compute plot the results including hypervolume and inverted generational distance in the `plot_results.ipynb` script.
