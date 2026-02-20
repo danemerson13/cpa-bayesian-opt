@@ -4,7 +4,10 @@ This repository contains code and data for the multi-objective optimization of c
 # Problem Setting
 We optimize under two typically competing objectives, minimized toxicity and maximized vitrification ability. We use a T24-based assay to assess cell viability (inversely of toxicity). We loosely correlate concetration of the solution to vitrification ability. We have 7 possible component CPAs, namely: Glycerol, DMSO, EG, 12PD, 13PD, 3M12PD, and Urea. Each CPA can exist in concentrations of [0,6]M, in 0.5M increments, with the constraint that the total solution concentration cannot exceed 6M. We can screen up to 40 unique solutions in one batch, with n=3 replicates. Each batch takes approximately 3 days to return a corresponding mean viability and variance. We are interested in how we can optimally select the next most informative *and* optimal batches of CPA cocktails to screen. The design space is vast ~50,000 possible solutions, and there are complex synergistic relations between CPAs that can neutralize toxicity that are not completely understood, even by experts.
 
-# Code
+# Synthetic Code
+We run synthetic experiments on the Rastrigin function in 2D, and a surrogate function based on our initial CPA data in 7D. The corresponding code is contained within the `mobo2D` and `moboCPA` folders, respectively.
+
+# Experimental Code
 The bulk of our code is contained within `src/mobo.py`. We run iterations of our optimization loop with four different methods. First, we have a naive method, where the samples are chosen at random. Next, we use the ParEGO method which is a common SOTA method in multi-objective optimization. Finally, we have two SOTA multi-objective Bayesian optimization methods, LogNEHVI and VarLogNEHVI. We select batches of 10 samples for each method, resulting in 40 samples for each iteration. Based on the initial dataset and the previous iterations, the code selects the next batch to screen. The initial data is contained within the `data/reduced_data_k100.pt`. Each iteration we generate a batch to screen under the `candidates` folder. The results of each screen including the experimental mean viability and variance is in the `results` folder. We parse the results into the `data` folder under their respective acquisition functions using the `util/process_data.py` script.
 
 # Results
